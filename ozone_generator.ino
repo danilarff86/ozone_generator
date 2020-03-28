@@ -30,7 +30,7 @@ const MenuItem menu_items[]
        {"Contrast"},    {"EEPROM dump"}, {"Graph"}, {"Help"},    {"Reboot", reboot}};
 
 int8_t menu_mode = -1;
-bool menu_item_changed = false;
+bool menu_item_changed = true;
 
 int16_t tmp_int16;
 uint16_t tmp_uint16;
@@ -48,9 +48,6 @@ setup( )
     encoder = new ClickEncoder( A1, A2, A3 );
 
     lcd.init( SCR_WD, SCR_HT );
-    lcd.fillScreen( BLACK );
-    lcd.setTextSize( 3 );
-    lcd.setTextColor( WHITE );
 
     Timer1.initialize( 1000 );
     Timer1.attachInterrupt( timerIsr );
@@ -174,20 +171,7 @@ handle_main_menu( )
         encoder_value = 0;
     }
 
-    if ( check_button_clicked( ) )
-    {
-        to_menu_item( menu_line );
-        return;
-    }
-
-    if ( check_menu_item_changed( ) )
-    {
-    }
-    else if ( menu_line == prev_menu_line )
-    {
-        return;
-    }
-
+    const auto prev_menu_start = menu_start;
     if ( menu_line >= menu_start + menu_items_on_screen )
     {
         menu_start = menu_line - menu_items_on_screen + 1;
@@ -197,20 +181,53 @@ handle_main_menu( )
         menu_start = menu_line;
     }
 
-    lcd.fillScreen( BLACK );
+    if ( check_button_clicked( ) )
+    {
+        to_menu_item( menu_line );
+        return;
+    }
 
-    static const char* main_menu_str = "MAIN MENU";
-    uint16_t main_menu_str_left;
-    lcd.getTextBounds( main_menu_str, 0, 0, &tmp_int16, &tmp_int16, &main_menu_str_left,
-                       &tmp_uint16 );
-    main_menu_str_left = ( SCR_WD - main_menu_str_left ) / 2;
-    lcd.setCursor( main_menu_str_left, 0 );
-    lcd.setTextSize( 3 );
-    lcd.setTextColor( GREEN );
-    lcd.println( main_menu_str );
-    const auto cursor_y = lcd.getCursorY( );
-    lcd.drawLine( 0, cursor_y + 10, SCR_WD, cursor_y + 10, MAGENTA );
-    lcd.setCursor( 0, cursor_y + 20 );
+    static uint16_t first_item_cursor;
+    static uint16_t text_height;
+
+    if ( check_menu_item_changed( ) )
+    {
+        lcd.fillScreen( BLACK );
+        lcd.setTextSize( 3 );
+        static const char* main_menu_str = "MAIN MENU";
+        uint16_t main_menu_str_left;
+        lcd.getTextBounds( main_menu_str, 0, 0, &tmp_int16, &tmp_int16, &main_menu_str_left,
+                           &text_height );
+        main_menu_str_left = ( SCR_WD - main_menu_str_left ) / 2;
+        lcd.setCursor( main_menu_str_left, 0 );
+        lcd.setTextColor( GREEN );
+        lcd.println( main_menu_str );
+        const auto cursor_y = lcd.getCursorY( );
+        lcd.drawLine( 0, cursor_y + 10, SCR_WD, cursor_y + 10, MAGENTA );
+        first_item_cursor = cursor_y + 20;
+    }
+    else if ( menu_line != prev_menu_line )
+    {
+        if ( prev_menu_start != menu_start )
+        {
+            lcd.fillRect( 0, first_item_cursor, SCR_WD, SCR_HT - first_item_cursor, BLACK );
+        }
+        else
+        {
+            lcd.fillRect( SCR_WD - 13, first_item_cursor, 13, SCR_HT - first_item_cursor, BLACK );
+            const auto offset = first_item_cursor
+                                + ( ( menu_line > prev_menu_line ? ( prev_menu_line - menu_start )
+                                                                 : ( menu_line - menu_start ) )
+                                    * ( text_height + 10 ) );
+            lcd.fillRect( 0, offset, SCR_WD - 13, text_height * 2 + 10, BLACK );
+        }
+    }
+    else
+    {
+        return;
+    }
+
+    lcd.setCursor( 0, first_item_cursor );
 
     // draw slider
     static const int16_t slider_height = 80;
