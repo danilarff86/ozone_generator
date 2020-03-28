@@ -1,0 +1,8 @@
+{
+    "board": "arduino:avr:pro",
+    "configuration": "cpu=16MHzatmega328",
+    "programmer": "ArduinoISP",
+    "sketch": "ozone_generator.ino",
+    "port": "/dev/cu.usbserial-A60086GX",
+    "output": "output"
+}
